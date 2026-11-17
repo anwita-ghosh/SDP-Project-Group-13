@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="common.js"></script><title>For Sponsors – Loksewa</title></head><body>
+<div class="top">Demo prototype · 80G tax exemption on eligible donations</div><div class="wrap"><nav><a class="logo" href="index.html">🌿 Loksewa Social Foundation</a><div class="links"><a  href="index.html">Home</a><a  href="students.html">For Students</a><a class="active" href="sponsors.html">For Sponsors</a></div></nav>
+<section class="hero small"><span class="badge">For donors &amp; sponsors</span><h1>Fund a learner's future</h1><p>Give to a general education fund or sponsor a specific student. Eligible donations receive an 80G receipt.</p></section>
+<section class="give"><h2>Make a gift</h2>
+<div class="toggle" id="mode"><button class="on" data-m="once">One-time</button><button data-m="monthly">Monthly</button></div>
+<div class="amts" id="amts"></div><input id="custom" type="number" min="100" placeholder="Other amount (₹)">
+<div class="impact" id="impact"></div><button class="btn alt" id="giveBtn">Give ₹2,500</button></section>
+<section><h2>Sponsor a specific student</h2><p class="sub">Only students whose guardians have consented are shown, by first name only.</p><div class="grid" id="profiles"><div class="empty">Loading…</div></div></section>
+<section><h2>Where your money goes</h2><p class="sub">Illustrative breakdown; replace with audited figures.</p><div class="panel" id="fund"></div></section>
+<section><h2>Why sponsors trust us</h2><div class="steps">
+<div class="step"><i>🧾</i><h3>80G receipts</h3><p>For eligible donations.</p></div>
+<div class="step"><i>🏫</i><h3>Paid to institutions</h3><p>Fees go directly to the school or college.</p></div>
+<div class="step"><i>📬</i><h3>Progress updates</h3><p>Termly updates for sponsored students.</p></div>
+<div class="step"><i>🔒</i><h3>Child privacy</h3><p>No photos or full names without consent.</p></div></div></section>
+<footer><b>LOKSEWA SOCIAL FOUNDATION</b><br>Bramha Avenue C4/404, off NIBM Rd, Kondhwa, Pune, MH 411048 · +91 99229 70768<br><a href="https://loksewa.org.in" target="_blank" rel="noopener">loksewa.org.in</a><br><br>Prototype for demonstration only.</footer></div>
+<dialog id="dlg"><form method="dialog" id="frm"><h3 style="margin-top:0">Complete your gift</h3><p id="dsum" class="sub"></p>
+<label>Full name</label><input id="dn" required maxlength="100"><label>Email</label><input id="de" type="email" required maxlength="150">
+<div class="row"><button type="button" class="btn" style="background:var(--mute)" onclick="dlg.close()">Cancel</button><button class="btn" id="dsub">Record pledge</button></div>
+<p class="sub" style="margin-top:12px;font-size:.8rem">This records your pledge. Payment is arranged with Loksewa; online payment is coming soon.</p></form></dialog>
+<script>
+const dlg=$("dlg");let mode="once",amt=2500,target="General education fund";
+const IMPACT={500:"Books and stationery for a child for a term.",1000:"A term's uniform and supplies for a primary student.",2500:"A term's school fees for a primary student.",5000:"Half a year of hostel and meals for a college student."};
+function drawAmts(){$("amts").innerHTML=[500,1000,2500,5000].map(v=>`<button class="${v===amt?"on":""}" data-v="${v}">${inr(v)}</button>`).join("");
+ $("giveBtn").textContent="Give "+inr(amt)+(mode==="monthly"?" / month":"");$("impact").textContent=(IMPACT[amt]||"Every rupee goes toward a learner's education.")+" (illustrative)";}
+$("amts").onclick=e=>{const v=e.target.dataset.v;if(!v)return;amt=+v;$("custom").value="";drawAmts();};
+$("custom").oninput=e=>{const v=+e.target.value;if(v>=100){amt=v;drawAmts();}};
+$("mode").onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;document.querySelectorAll("#mode button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));drawAmts();};
+function openGive(t,a){target=t;if(a)amt=a;drawAmts();$("dsum").textContent=t+" · "+inr(amt)+(mode==="monthly"?" every month":" one-time");$("frm").reset();dlg.showModal();}
+$("giveBtn").onclick=()=>openGive("General education fund");
+$("frm").onsubmit=async e=>{e.preventDefault();const b=$("dsub");b.disabled=true;
+ const {error}=await sb.from("pledges").insert({donor_name:$("dn").value,email:$("de").value,amount:amt,mode,target});
+ alert(error?"Sorry, something went wrong. Please try again.":"💚 Thank you! Your pledge has been recorded and Loksewa will be in touch.");b.disabled=false;if(!error)dlg.close();};
+(async()=>{const {data}=await sb.from("student_profiles").select("*").order("id");
+ $("profiles").innerHTML=(data&&data.length)?data.map(p=>{const pct=Math.min(100,Math.round(p.raised/p.goal*100)),left=Math.max(100,p.goal-p.raised);
+  return `<div class="card"><span class="tag">${esc(p.stage)}</span><h3>${esc(p.first_name)}, ${esc(p.age)}</h3><p>${esc(p.story)}</p><p><b>Needs:</b> ${esc(p.need)}</p><div class="prog"><span style="width:${pct}%"></span></div><div class="pmeta"><span>${inr(p.raised)} raised</span><span>${pct}% of ${inr(p.goal)}</span></div><button class="btn" onclick="openGive('Sponsor ${esc(p.first_name)}',${Math.min(left,5000)})">Sponsor ${esc(p.first_name)}</button></div>`}).join(""):'<div class="empty">No student profiles to show right now.</div>';})();
+$("fund").innerHTML=[["Direct student aid",82],["Verification & disbursement",8],["Outreach & awareness",6],["Administration",4]].map(f=>`<div class="fund"><div class="lbl"><span>${f[0]}</span><b>${f[1]}%</b></div><div class="prog"><span style="width:${f[1]}%"></span></div></div>`).join("");
+drawAmts();
+</script></body></html>

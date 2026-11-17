@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="common.js"></script><title>Loksewa Social Foundation – Education Aid Portal</title></head><body>
+<div class="top">Demo prototype · 80G tax exemption on eligible donations</div><div class="wrap"><nav><a class="logo" href="index.html">🌿 Loksewa Social Foundation</a><div class="links"><a class="active" href="index.html">Home</a><a  href="students.html">For Students</a><a  href="sponsors.html">For Sponsors</a></div></nav>
+<section class="hero"><span class="badge">Pune, Maharashtra · Education Aid Portal</span>
+<h1>Every learner deserves a path forward.</h1>
+<p>From kindergarten to postgraduate study, Loksewa connects students to scholarships, sponsorships and support.</p>
+<div class="stats">
+<div class="stat"><b id="c1">–</b><span>Students supported</span></div>
+<div class="stat"><b id="c2">–</b><span>Active aid programs</span></div>
+<div class="stat"><b id="c3">–</b><span>Sponsors</span></div></div></section>
+<section><h2 style="text-align:center">How can we help you today?</h2><div class="aud">
+<div class="card"><span class="big">🎓</span><h3>I'm a student or parent</h3><p>Find scholarships, fee waivers and sponsorships for any stage. Apply once and track your application.</p><a class="btn" href="students.html">Find support →</a></div>
+<div class="card"><span class="big">💚</span><h3>I want to sponsor a student</h3><p>Give once or monthly, or sponsor a specific learner. 80G receipts for eligible donations.</p><a class="btn alt" href="sponsors.html">Become a sponsor →</a></div></div></section>
+<section><h2>How it works</h2><div class="steps">
+<div class="step"><i>🔎</i><h3>1. Discover</h3><p>Filter by stage and circumstance.</p></div>
+<div class="step"><i>📝</i><h3>2. Apply once</h3><p>One form with secure document upload.</p></div>
+<div class="step"><i>✅</i><h3>3. Verified</h3><p>Our team reviews every application.</p></div>
+<div class="step"><i>🎓</i><h3>4. Funded</h3><p>Support goes to the school or college.</p></div></div></section>
+<section><h2>Beyond education</h2><div class="also"><div>🍲 Fighting hunger</div><div>🩺 Healthcare</div><div>👩‍🌾 Women's empowerment</div><div>🌾 Livelihood</div><div>👧 Orphans, widows &amp; children</div></div></section>
+<footer><b>LOKSEWA SOCIAL FOUNDATION</b><br>Bramha Avenue C4/404, off NIBM Rd, Kondhwa, Pune, MH 411048 · +91 99229 70768<br><a href="https://loksewa.org.in" target="_blank" rel="noopener">loksewa.org.in</a><br><br>Prototype for demonstration only.</footer></div>
+<script>
+function count(id,to){let v=0;const st=Math.max(1,Math.ceil(to/50));const t=setInterval(()=>{v=Math.min(v+st,to);$(id).textContent=v.toLocaleString("en-IN");if(v>=to)clearInterval(t)},20);}
+(async()=>{const {data}=await sb.rpc("public_stats");if(!data)return;count("c1",data.students);count("c2",data.programs);count("c3",data.sponsors);})();
+</script></body></html>

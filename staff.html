@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Staff Portal – Loksewa</title><link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="common.js"></script></head>
+<body><div class="top">Staff only · Confidential: contains personal data, including minors' information</div>
+<div class="wrap"><nav><a class="logo" href="staff.html">🌿 Loksewa · Staff Portal</a><div class="links" id="who"></div></nav>
+<section id="login" class="panel" style="max-width:380px;margin:40px auto"><h2 style="margin-top:0">Staff sign in</h2>
+<label>Email</label><input id="em" type="email" autocomplete="username"><label style="display:block;margin-top:10px">Password</label><input id="pw" type="password" autocomplete="current-password">
+<button class="btn" id="go" style="margin-top:14px">Sign in</button><div class="msg" id="msg"></div></section>
+<section id="app" hidden><div class="stats" id="stats"></div>
+<div class="chips" id="tabs"><button class="chip on" data-t="apps">Applications</button><button class="chip" data-t="programs">Programs</button><button class="chip" data-t="pledges">Pledges</button><button class="chip" data-t="disb">Disbursements</button></div>
+<div id="docs" class="status"></div><div class="panel"><div id="view"></div></div></section></div>
+<script>
+const STATUS=["received","under_review","approved","rejected","disbursed"];let role=null,tab="apps";
+$("go").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$("em").value,password:$("pw").value});if(error){$("msg").textContent=error.message;return;}enter();};
+async function enter(){const {data}=await sb.rpc("staff_role");
+ if(!data){$("msg").textContent="This account does not have staff access.";await sb.auth.signOut();return;}
+ role=data;$("login").hidden=true;$("app").hidden=false;
+ $("who").innerHTML=`<span class="tag">${esc(role)}</span> <button class="btn ghost mini" id="out">Sign out</button>`;
+ $("out").onclick=async()=>{await sb.auth.signOut();location.reload();};stats();show("apps");}
+(async()=>{const {data:{session}}=await sb.auth.getSession();if(session)enter();})();
+$("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;document.querySelectorAll("#tabs .chip").forEach(c=>c.classList.toggle("on",c.dataset.t===t));$("docs").innerHTML="";show(t);};
+const tbl=(h,rows)=>rows.length?`<div class="tw"><table><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</table></div>`:'<p class="sub">Nothing here yet.</p>';
+async function stats(){const [a,p,d]=await Promise.all([sb.from("applications").select("status"),sb.from("pledges").select("amount"),sb.from("disbursements").select("amount")]);
+ const A=a.data||[],sum=x=>(x.data||[]).reduce((s,r)=>s+Number(r.amount),0),n=s=>A.filter(r=>s.includes(r.status)).length;
+ $("stats").innerHTML=[[n(["received","under_review"]),"Awaiting review"],[n(["approved"]),"Approved, to pay"],[inr(sum(p)),"Pledged"],[inr(sum(d)),"Disbursed"]].map(s=>`<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join("");}
+async function show(t){tab=t;$("view").innerHTML="Loading…";
+ if(t==="apps"){const {data,error}=await sb.from("applications").select("id,tracking_id,student_name,guardian_contact,need,status,created_at,programs(name)").order("created_at",{ascending:false});
+  if(error)return $("view").innerHTML=esc(error.message);
+  $("view").innerHTML=tbl(["ID","Student","Program","Contact","Need","Status",""],data.map(r=>[esc(r.tracking_id),esc(r.student_name),esc(r.programs?.name||"-"),esc(r.guardian_contact),esc(r.need),
+   `<select onchange="setStatus(${r.id},this.value)">${STATUS.map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select>`,
+   `<button class="btn ghost mini" onclick="docs('${esc(r.tracking_id)}')">Docs</button> `+(r.status==="approved"?`<button class="btn mini" onclick="disburse(${r.id})">Disburse</button>`:"")]));}
+ if(t==="programs"){const {data}=await sb.from("programs").select("*").order("id");
+  $("view").innerHTML=(role==="admin"?`<div class="addf"><input id="pn" placeholder="Name"><input id="ps" placeholder="Stages, comma-separated"><input id="pc" placeholder="Category"><input id="pm" placeholder="Circumstances, comma-separated"><input id="pa" placeholder="Amount"><input id="pd" placeholder="Deadline"><input id="pt" placeholder="Description"><button class="btn" onclick="addProgram()">Add program</button></div>`:"")+
+   tbl(["Program","Stages","Category","Amount","Active",""],(data||[]).map(r=>[esc(r.name),esc(r.stages.join(", ")),esc(r.category),esc(r.amount),r.active?"Yes":"No",role==="admin"?`<button class="btn ghost mini" onclick="toggleProgram(${r.id},${!r.active})">${r.active?"Deactivate":"Activate"}</button>`:""]));}
+ if(t==="pledges"){const {data,error}=await sb.from("pledges").select("*").order("created_at",{ascending:false});
+  $("view").innerHTML=error?"Your role cannot view pledges.":tbl(["Date","Donor","Email","Amount","Type","For"],data.map(r=>[new Date(r.created_at).toLocaleDateString("en-IN"),esc(r.donor_name),esc(r.email),inr(r.amount),esc(r.mode),esc(r.target)]));}
+ if(t==="disb"){const {data,error}=await sb.from("disbursements").select("amount,payee,created_at,applications(tracking_id,student_name)").order("created_at",{ascending:false});
+  $("view").innerHTML=error?"Your role cannot view disbursements.":tbl(["Date","Application","Student","Payee","Amount"],data.map(r=>[new Date(r.created_at).toLocaleDateString("en-IN"),esc(r.applications?.tracking_id),esc(r.applications?.student_name),esc(r.payee),inr(r.amount)]));}}
+async function docs(t){const bk=sb.storage.from("application-docs");const {data}=await bk.list(t);const out=[];
+ for(const f of data||[]){const {data:u}=await bk.createSignedUrl(`${t}/${f.name}`,300);if(u)out.push(`<a href="${esc(u.signedUrl)}" target="_blank" rel="noopener">${esc(f.name)}</a>`);}
+ $("docs").innerHTML=`<b>Documents for ${esc(t)}</b> (links expire in 5 minutes): `+(out.join(" · ")||"none uploaded")+` <button class="btn ghost mini" onclick="$('docs').innerHTML=''">Close</button>`;}
+async function setStatus(id,s){const {error}=await sb.rpc("set_application_status",{p_id:id,p_status:s});if(error)alert("Not allowed for your role.");stats();show(tab);}
+async function disburse(id){const payee=prompt("Pay to (school / college name):");if(!payee)return;const amount=Number(prompt("Amount (₹):"));if(!(amount>0))return;
+ const {error}=await sb.from("disbursements").insert({application_id:id,amount,payee});if(error)return alert("Not allowed for your role.");
+ await sb.rpc("set_application_status",{p_id:id,p_status:"disbursed"});stats();show(tab);}
+async function addProgram(){const l=v=>$(v).value.split(",").map(x=>x.trim()).filter(Boolean);
+ const {error}=await sb.from("programs").insert({name:$("pn").value,stages:l("ps"),category:$("pc").value,circumstances:l("pm"),amount:$("pa").value,deadline:$("pd").value,description:$("pt").value});
+ if(error)alert(error.message);show("programs");}
+async function toggleProgram(id,active){await sb.from("programs").update({active}).eq("id",id);show("programs");}
+</script></body></html>

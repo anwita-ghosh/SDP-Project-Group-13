@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="common.js"></script><title>For Students – Loksewa</title></head><body>
+<div class="top">Demo prototype · 80G tax exemption on eligible donations</div><div class="wrap"><nav><a class="logo" href="index.html">🌿 Loksewa Social Foundation</a><div class="links"><a  href="index.html">Home</a><a class="active" href="students.html">For Students</a><a  href="sponsors.html">For Sponsors</a></div></nav>
+<section class="hero small"><span class="badge">For students &amp; families</span><h1>Find scholarships &amp; aid</h1><p>Pick an education stage, then refine by type of support and circumstance.</p></section>
+<section><div class="chips" id="stages"></div>
+<div class="bar"><input id="q" placeholder="Search e.g. girl child, widow, engineering…">
+<select id="cat"><option value="">All support types</option><option>Scholarship</option><option>Sponsorship</option><option>Fee waiver</option><option>Books &amp; supplies</option></select>
+<select id="need"><option value="">Any circumstance</option><option>Low income</option><option>Girl child</option><option>Disability</option><option>Merit</option><option>Orphan / single parent</option><option>Widow's child</option></select></div>
+<div class="grid" id="list"><div class="empty">Loading…</div></div></section>
+<section><h2>Before you apply</h2><div class="two">
+<div class="panel"><h3 style="margin-top:0">📄 Documents you may need</h3><ul class="checks"><li>Student's ID or admission proof</li><li>Latest marksheet or report card</li><li>Family income certificate</li><li>Guardian's ID proof</li><li>Category, disability or death certificate (if applicable)</li></ul><p class="sub" style="margin-top:10px">PDF, JPG or PNG, up to 5 MB each.</p></div>
+<div class="panel"><h3 style="margin-top:0">🔍 Track your application</h3><p class="sub" style="margin:0">Enter the tracking ID you received after applying.</p>
+<div class="track"><input id="tid" placeholder="e.g. LSF-1A2B3C"><button class="btn" id="tbtn">Check</button></div><div class="status" id="tstat"></div></div></div></section>
+<footer><b>LOKSEWA SOCIAL FOUNDATION</b><br>Bramha Avenue C4/404, off NIBM Rd, Kondhwa, Pune, MH 411048 · +91 99229 70768<br><a href="https://loksewa.org.in" target="_blank" rel="noopener">loksewa.org.in</a><br><br>Prototype for demonstration only.</footer></div>
+<dialog id="dlg"><form method="dialog" id="frm"><h3 id="dt" style="margin-top:0">Apply</h3>
+<label>Student's name</label><input id="fn" required maxlength="100">
+<label>Guardian's contact (email or phone)</label><input id="fc" required maxlength="100">
+<label>State</label><select id="fs"><option>Maharashtra</option><option>Karnataka</option><option>Tamil Nadu</option><option>Uttar Pradesh</option><option>Other</option></select>
+<label>Tell us briefly about the need</label><textarea id="fd" rows="3" maxlength="1000"></textarea>
+<label>Upload documents (PDF/JPG/PNG, max 5 MB each)</label><input id="ff" type="file" multiple accept=".pdf,.jpg,.jpeg,.png">
+<label style="display:flex;gap:8px;align-items:flex-start"><input id="fk" type="checkbox" required style="width:auto;margin-top:4px"><span>I am the student's parent/guardian (or the student is 18+) and I consent to Loksewa processing this information to assess the application.</span></label>
+<div class="row"><button type="button" class="btn" style="background:var(--mute)" onclick="dlg.close()">Cancel</button><button class="btn" id="sub">Submit</button></div></form></dialog>
+<script>
+const STAGES=["All","Kindergarten","Primary","Secondary","Higher Secondary","Undergraduate","Postgraduate","PhD"];
+let DATA=[],stage="All",currentProgram=null;const dlg=$("dlg");
+$("stages").innerHTML=STAGES.map(s=>`<button class="chip ${s==="All"?"on":""}" data-s="${s}">${s}</button>`).join("");
+$("stages").onclick=e=>{if(!e.target.dataset.s)return;stage=e.target.dataset.s;document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.s===stage));render();};
+["q","cat","need"].forEach(i=>$(i).oninput=render);
+async function load(){const {data,error}=await sb.from("programs").select("*").eq("active",true).order("id");
+ if(error){console.error("Programs load failed:",error);$("list").innerHTML='<div class="empty">Could not load programs. Please try again later.</div>';return;}
+ DATA=data;render();}
+function render(){const q=$("q").value.toLowerCase(),c=$("cat").value,n=$("need").value;
+ const r=DATA.filter(x=>(stage==="All"||x.stages.includes(stage))&&(!c||x.category===c)&&(!n||x.circumstances.includes(n))&&(!q||(x.name+x.description+x.circumstances.join()).toLowerCase().includes(q)));
+ $("list").innerHTML=r.length?r.map(x=>`<div class="card"><span class="tag">${esc(x.category)}</span><h3>${esc(x.name)}</h3><p>${esc(x.description)}</p><p><small>${esc(x.stages.join(" · "))}</small></p><div class="meta"><span class="amt">${esc(x.amount)}</span><span>Due: ${esc(x.deadline)}</span></div><button class="btn" onclick="apply(${x.id})">Apply</button></div>`).join(""):'<div class="empty">No matches yet. Try widening your filters.</div>';}
+function apply(id){currentProgram=id;$("dt").textContent="Apply: "+DATA.find(x=>x.id===id).name;$("frm").reset();dlg.showModal();}
+$("frm").onsubmit=async e=>{e.preventDefault();const b=$("sub");b.disabled=true;b.textContent="Submitting…";
+ const files=[...$("ff").files];
+ if(files.some(f=>f.size>5*1024*1024)){alert("Each file must be 5 MB or smaller.");b.disabled=false;b.textContent="Submit";return;}
+ const {data:tid,error}=await sb.rpc("submit_application",{p_program:currentProgram,p_name:$("fn").value,p_contact:$("fc").value,p_state:$("fs").value,p_need:$("fd").value});
+ if(error){alert("Sorry, something went wrong. Please try again.");b.disabled=false;b.textContent="Submit";return;}
+ let failed=0;for(const f of files){const {error:ue}=await sb.storage.from("application-docs").upload(`${tid}/${Date.now()}-${f.name.replace(/[^\w.\-]/g,"_")}`,f);if(ue)failed++;}
+ alert("✅ Application received! Your tracking ID is "+tid+". Please save it."+(failed?`\n⚠️ ${failed} file(s) could not be uploaded; staff will contact you.`:""));
+ b.disabled=false;b.textContent="Submit";dlg.close();};
+$("tbtn").onclick=async()=>{const {data}=await sb.rpc("track_application",{tid:$("tid").value.trim()});$("tstat").textContent=data?("Status: "+data.replace("_"," ")):"No application found for that ID.";};
+load();
+</script></body></html>
